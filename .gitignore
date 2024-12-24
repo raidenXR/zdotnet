@@ -1,0 +1,10 @@
+zig-out/
+.zig-cache/
+
+*.txt
+*.gnu
+*.png
+*.html
+*.so
+*.dll
+*.dy
