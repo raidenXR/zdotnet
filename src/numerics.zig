@@ -6,10 +6,10 @@ pub const Vector2 = @Vector(2, f32);
 pub const Vector3 = @Vector(3, f32);
 pub const Vector4 = @Vector(4, f32);
 
-// pub const Matrix3x2 = [6]f32;
-// pub const Matrix4x4 = [16]f32;
-pub const Matrix3x2 = @Vector(6, f32);
-pub const Matrix4x4 = @Vector(16, f32);
+pub const Matrix3x2 = [6]f32;
+pub const Matrix4x4 = [16]f32;
+// pub const Matrix3x2 = @Vector(6, f32);
+// pub const Matrix4x4 = @Vector(16, f32);
 
 // pub const Quaternion = [4]f32;
 pub const Quaternion = @Vector(4, f32);
@@ -882,6 +882,52 @@ pub const mat3x2 = struct
             m1[5] + (m2[5] - m1[5]) * amount,
         };
     }
+
+    
+    /// Returns a new matrix with the negated elements of the given matrix.
+    pub fn negate (m:Matrix3x2) Matrix3x2
+    {
+        var res = Matrix3x2{};
+        inline for (0..6) |i| res[i] = -m[i];
+
+        return res;
+    }
+
+    /// Adds two matrices together.
+    pub fn add (m1:Matrix3x2, m2:Matrix3x2) Matrix3x2
+    {
+        var res = Matrix3x2{};
+        inline for (0..6) |i| res[i] = m1[i] + m2[i];
+
+        return res;
+    }
+
+    /// Subtracts the second matrix from the first.
+    pub fn subtract (m1:Matrix3x2, m2:Matrix3x2) Matrix3x2
+    {
+        var res = Matrix3x2{};
+        inline for (0..6) |i| res[i] = m1[i] - m2[i];
+
+        return res;
+    }
+
+    /// Multiplies a matrix by another matrix.
+    pub fn multiply (m1:Matrix3x2, m2:Matrix3x2) Matrix3x2
+    {
+        return Matrix3x2{
+            // First row
+            m1[0] * m2[0] + m1[1] * m2[2],
+            m1[0] * m2[1] + m1[1] * m2[3],
+
+            // Second row
+            m1[2] * m2[0] + m1[3] * m2[2],
+            m1[2] * m2[1] + m1[3] * m2[3],
+
+            // Third row
+            m1[4] * m2[0] + m1[5] * m2[2] + m2[4],
+            m1[4] * m2[1] + m1[5] * m2[3] + m2[5],
+        };        
+    }
 };
 
 pub const mat4x4 = struct 
@@ -1498,5 +1544,62 @@ pub const mat4x4 = struct
             m1[14] + (m2[14] - m1[14]) * amount,
             m1[15] + (m2[15] - m1[15]) * amount,
         };
+    }
+
+    /// Returns a new matrix with the negated elements of the given matrix.
+    pub fn negate (m:Matrix4x4) Matrix4x4
+    {
+        var res = Matrix4x4{};
+        inline for (0..16) |i| res[i] = -m[i];
+
+        return res;
+    }
+
+    /// Adds two matrices together.
+    pub fn add (m1:Matrix4x4, m2:Matrix4x4) Matrix4x4
+    {
+        var res = Matrix4x4{};
+        inline for (0..16) |i| res[i] = m1[i] + m2[i];
+
+        return res;
+    }
+
+    /// Subtracts the second matrix from the first.
+    pub fn subtract (m1:Matrix4x4, m2:Matrix4x4) Matrix4x4
+    {
+        var res = Matrix4x4{};
+        inline for (0..16) |i| res[i] = m1[i] - m2[i];
+
+        return res;
+    }
+
+    /// Multiplies a matrix by another matrix.
+    pub fn multiply (m1:Matrix4x4, m2:Matrix4x4) Matrix4x4
+    {
+        return Matrix4x4{
+            // First row
+            m1[0] * m2[0] + m1[1] * m2[4] + m1[2] * m2[8] + m1[3] * m2[12],
+            m1[0] * m2[1] + m1[1] * m2[5] + m1[2] * m2[9] + m1[3] * m2[13],
+            m1[0] * m2[2] + m1[1] * m2[6] + m1[2] * m2[10] + m1[3] * m2[14],
+            m1[0] * m2[3] + m1[1] * m2[7] + m1[2] * m2[11] + m1[3] * m2[15],
+ 
+            // Second row
+            m1[4] * m2[0] + m1[5] * m2[4] + m1[6] * m2[8] + m1[7] * m2[12],
+            m1[4] * m2[1] + m1[5] * m2[5] + m1[6] * m2[9] + m1[7] * m2[13],
+            m1[4] * m2[2] + m1[5] * m2[6] + m1[6] * m2[10] + m1[7] * m2[14],
+            m1[4] * m2[3] + m1[5] * m2[7] + m1[6] * m2[11] + m1[7] * m2[15],
+ 
+            // Third row
+            m1[8] * m2[0] + m1[9] * m2[4] + m1[10] * m2[8] + m1[11] * m2[12],
+            m1[8] * m2[1] + m1[9] * m2[5] + m1[10] * m2[9] + m1[11] * m2[13],
+            m1[8] * m2[2] + m1[9] * m2[6] + m1[10] * m2[10] + m1[11] * m2[14],
+            m1[8] * m2[3] + m1[9] * m2[7] + m1[10] * m2[11] + m1[11] * m2[15],
+ 
+            // Fourth row
+            m1[12] * m2[0] + m1[13] * m2[4] + m1[14] * m2[8] + m1[15] * m2[12],
+            m1[12] * m2[1] + m1[13] * m2[5] + m1[14] * m2[9] + m1[15] * m2[13],
+            m1[12] * m2[2] + m1[13] * m2[6] + m1[14] * m2[10] + m1[15] * m2[14],
+            m1[12] * m2[3] + m1[13] * m2[7] + m1[14] * m2[11] + m1[15] * m2[15],    
+        };        
     }
 };
