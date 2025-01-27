@@ -1,48 +1,23 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const trim_head = 0;
-const trim_tail = 1;
-const trim_both = 2;
-
-var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-const gpa_allocator = gpa.allocator();
-var no_of_strings: usize = 0;
-
-var intern_table  = std.StringHashMap(void).init(gpa_allocator);
-var buffer_stack  = std.ArrayList([]u8).init(gpa_allocator); 
-
-var total_allocation: usize = 0;   // counts the total allocation of strings NOT contained in string_stack
-var stack_allocation: usize = 0;   // counts the total allocation of strings contained in string_stack
-var string_allocated: usize = 0;   // counts the number of string NOT in stack/pool
-
-
-fn fastAlloc (allocator:std.mem.Allocator, size:usize) []u8 
-{
-    return buffer: {
-        for (buffer_stack.items, 0..) |buf, i| 
-        {
-            if (buf.len >= size)
-            {
-                stack_allocation -= size;
-                break :buffer buffer_stack.orderedRemove(i);
-            }
-            else {
-                total_allocation += size;
-                string_allocated += 1;
-                break :buffer allocator.alloc(u8, size) catch @panic ("allocator failed to alloc buffer for string");                   
-            }
-        }
-    }; 
-}
-
-fn fastFree (buffer:[]u8) void
-{
-    buffer_stack.append(buffer) catch @panic ("fastFree() failed");
-    stack_allocation += buffer.len;
-}
 
 pub const Empty: []const u8 = &[0]u8{};
+
+/// Compares substrings of two specified String objects using the specified rules, 
+/// and returns an integer that indicates their relative position in the sort order.
+pub fn compare (a:[]const u8, b:[]const u8) i32
+{
+    const len = @min (a.len, b.len);    
+    var i: usize = 0;
+    var r: i32 = 0;
+    while (i < len and a[i] == b[i]) : (i += 1)
+    {
+        r = @as(i32, @intCast(a[i])) - @as(i32, @intCast(b[i]));
+    }
+
+    return r;
+}
 
 /// Concatenates the elements of a specified String array.
 pub fn concat (allocator:Allocator, values:[]const[]const u8) []const u8
@@ -116,6 +91,60 @@ pub fn isEmpty (s:[]const u8) bool
     return s.len == 0;
 }
 
+/// Concatenates the members of a collection, using the specified separator between each member.
+pub fn join (allocator:Allocator, separator:[]const u8, values: []const[]const u8) []const u8
+{
+    var total_len: usize = 0;
+    for (values) |s| total_len += s.len + separator.len;
+
+    const buffer = allocator.alloc(u8, total_len) catch @panic("String.join failed");
+    // var idx: usize = 0;
+    var ptr = buffer.ptr;
+
+    for (values) |s| 
+    {
+        @memcpy(ptr[0..s.len], s);
+        ptr += s.len;
+        @memcpy(ptr[0..separator.len], separator);
+        ptr += separator.len;
+    }
+
+    return buffer;
+}   
+
+/// Reports the zero-based index position of the last occurrence of a specified Unicode character within this instance.
+pub fn lastIndexOf (s:[]const u8, char:u8) usize 
+{
+    var n = s.len - 1;
+    while (n > 0 and s[n] != char) n -= 1;
+
+    return n;     
+}
+
+/// Returns a new string that right-aligns the characters in this instance by padding them 
+/// on the left with a specified Unicode character, for a specified total length.
+pub fn padLeft (allocator:Allocator, s:[]const u8, n:usize, pad:u8) []const u8
+{
+    const buffer = allocator.alloc(u8, s.len + n) catch @panic("String.padLeft failed");
+
+    for (0..n) |i| buffer[i] = pad;
+    @memcpy (buffer[n..n + s.len], s);
+
+    return buffer;
+}
+
+/// Returns a new string that right-aligns the characters in this instance by padding them 
+/// on the right with a specified Unicode character, for a specified total length.
+pub fn padRight (allocator:Allocator, s:[]const u8, n:usize, pad:u8) []const u8
+{
+    const buffer = allocator.alloc(u8, s.len + n) catch @panic("String.padLeft failed");
+
+    @memcpy (buffer[0..s.len], s);
+    for (s.len..s.len + n) |i| buffer[i] = pad;
+
+    return buffer;
+}
+
 pub fn split (allocator:Allocator, str:[]const u8, chars:[]const u8) []const[]const u8
 {
     var a: usize = 0;
@@ -138,3 +167,71 @@ pub fn split (allocator:Allocator, str:[]const u8, chars:[]const u8) []const[]co
     return list.items;
 }
 
+/// Determines whether the beginning of this string instance matches the specified string.
+pub fn startsWith (s:[]const u8, value:[]const u8) bool 
+{
+    return if (value.len > s.len) false else std.mem.eql(u8, s[0..value.len], value);
+}
+
+/// Returns a copy of this string converted to lowercase.
+pub fn toLower (allocator:Allocator, s:[]const u8) []const u8
+{
+    const buffer = allocator.alloc(u8, s.len) catch @panic("String.toLower failed");
+    
+    return std.ascii.lowerString(buffer, s);
+}
+
+/// Returns a copy of this string converted to uppercase.
+pub fn toUpper (allocator:Allocator, s:[]const u8) []const u8 
+{
+    const buffer = allocator.alloc(u8, s.len) catch @panic("String.toUpper failed");
+    
+    return std.ascii.upperString(buffer, s);
+}
+
+/// Removes all leading and trailing instances of a character from the current string.
+pub fn trim (allocator:Allocator, s:[]const u8, char:u8) []const u8
+{
+    var l: usize = 0;
+    var r: usize = s.len - 1;
+
+    while (l < s.len and s[l] == char) l += 1;
+    while (r > 0 and s[r] == char) r -= 1;    
+
+    const buffer = allocator.alloc(u8, r - l) catch @panic("String.trim failed");
+    @memcpy (buffer, s[l..r]);
+
+    return buffer;
+}
+
+/// Removes all the trailing occurrences of a set of characters specified in an array from the current string.
+pub fn trimEnd (allocator:Allocator, s:[]const u8, char:u8) []const u8 
+{
+    var r: usize = s.len - 1;
+
+    while (r > 0 and s[r] == char) r -= 1;
+    
+    const buffer = allocator.alloc(u8, r) catch @panic("String.trimEnd failed");
+    @memcpy (buffer, s[0..r]);
+    
+    return buffer;
+}
+
+/// Removes all the leading occurrences of a specified character from the current string.
+pub fn trimStart (allocator:Allocator, s:[]const u8, char:u8) []const u8
+{
+    var l: usize = 0;
+
+    while (l < s.len and s[l] == char) l += 1;
+
+    const len = s.len - (l);
+    const buffer = allocator.alloc(u8, len) catch @panic("String.trimEnd failed");
+    @memcpy (buffer, s[l..]);
+
+    return buffer;
+}
+
+pub fn asSpan (s:[]const u8, start:usize, len:usize) []const u8
+{
+    return s[start..start + len];
+}
