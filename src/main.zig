@@ -4,8 +4,11 @@
 const std = @import("std");
 const print = std.debug.print;
 
-const numerics = @import("numerics.zig");
+// const numerics = @import("dotnet_classes/numerics.zig");
 
+usingnamespace @import("dotnet_classes/numerics.zig");
+
+var v4 = Vector4{};
 
 pub const Camera = struct 
 {
@@ -42,7 +45,8 @@ const BinaryOp = enum {
     mult,
 };
 
-const Expr = union(enum) {
+const Expr = union(enum) 
+{
     number: f64,
     identifier: []const u8,
     mathop: []const u8,
@@ -50,6 +54,8 @@ const Expr = union(enum) {
     unary:  struct {u: *Expr, op: UnaryOp},
     down:   struct {e: *Expr, d: *Expr},
     assignment: struct {name: []const u8, e: *Expr},    
+    diff:   struct {*Expr, *Expr},
+    prod:   struct {*Expr, *Expr, *Expr},
     none,
 
     /// insert typle and return an *Expr that is of appropriate union
@@ -66,15 +72,28 @@ const Expr = union(enum) {
             .identifier => |n| print("identifier: {s}\n", .{n}),
             .number => |n| print("number: {d}\n", .{n}),
             .mathop => |n| print("mathop: {s}\n", .{n}),
-            .binary => |b| {
+            .binary => |b| 
+            {
                 string(b.l);
                 string(b.r);
             },
             .unary => |u| string(u.u),
             .down  => |d| string(d.d), 
-            .assignment => |a| {            
+            .assignment => |a| 
+            {            
                 print("assignment: {s}\n", .{a.name});
                 string(a.e);
+            },
+            .diff => |d| 
+            {
+                string (d[0]);
+                string (d[1]);
+            },
+            .prod => |d| 
+            {
+                string (d[0]);
+                string (d[1]);
+                string (d[2]);
             },
             .none => {},            
         }
@@ -86,27 +105,82 @@ fn string (e: *const Expr) void {
         .number => |n| {
             print("number: {d}\n", .{n});
         },
-        .identifier => |n| print("identifier: {s}\n", .{n}),
-        .mathop => |n| print("mathop: {s}\n", .{n}),
         .binary => |b| {
             string(b.l);
             string(b.r);
         },
+        .identifier => |n| print("identifier: {s}\n", .{n}),
+        .mathop => |n| print("mathop: {s}\n", .{n}),
         .unary => |u| string(u.u),
         .down  => |d| string(d.d), 
         .assignment => |a| {            
             print("assignment: {s}\n", .{a.name});
             string(a.e);
         },
+        .diff => |d|
+        {
+            string (d[0]);
+            string (d[1]);
+        },
+        .prod => |p|
+        {
+            string (p[0]);
+        },
         .none => {},
     }
 }
 
 
+// interface struct
+const Subject = struct {
+    ctx: *anyopaque,
+
+    dostuff0fn: *const fn (*anyopaque) bool,
+    dostuff1fn: *const fn (*anyopaque) void,
+
+    pub fn dostuff0 (s:Subject) bool {
+        return s.dostuff0fn (s.ctx);
+    }
+
+    pub fn dostuff1 (s:Subject) void {
+        s.dostuff1fn (s.ctx);
+    }
+};
+
+
+const ConcreteSubject = struct {
+    a: u32,
+    b: u32,
+    i: usize,
+
+    pub fn dostuff0 (s:*ConcreteSubject) bool {
+        return if (s.a < 10) true else false;
+    }
+
+    pub fn dostuff1 (s:*ConcreteSubject) void {
+        const z = s.a + s.b;
+        const idx = s.i * s.i - 4;
+        std.debug.print("{},  {}\n", .{z, idx});
+    }
+
+    // pub fn subject (s:*ConcreteSubject) Subject {
+    //     return .{
+    //         .ctx = s,
+    //         .dostuff0fn = dostuff0,
+    //         .dostuff1fn = dostuff1,
+    //     };
+    // }
+};
+
+
 pub fn main() !void {
     var num = Expr{.number = 456};
+    var num2 = Expr{.number = 123};
     var id  = Expr{.identifier = "Gt"};
-    var bin = Expr{.binary = .{.l = &num, .r = &id, .op = .div}};
+    var id2  = Expr{.identifier = "id2"};
+    var dif  = Expr{.diff = .{&num, &id}};
+    var dif2 = Expr{.diff = .{&num2, &id2}};
+    var bin = Expr{.binary = .{.l = &dif, .r = &dif2, .op = .div}};
     const fx = Expr{.assignment = .{.name = "f(x)", .e = &bin}};
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -121,4 +195,16 @@ pub fn main() !void {
     string(&fx);    
 
     fx.printfn();
+
+
+    // var concreate_subj = ConcreteSubject{.a = 1, .b = 5, .i = 9};
+    // const subject = concreate_subj.subject();
+    // _ = subject.dostuff0();
+    // subject.dostuff1();
+
+    const v0 = std.mem.zeroes(numerics.Vector4);
+    print("vector: {any}\n", .{v0});
+
+    const b0 = std.mem.zeroes([10]u8);
+    print("buffer: {any}\n", .{b0});
 }

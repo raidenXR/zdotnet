@@ -1,5 +1,4 @@
 const genAlg = @import("genAlg.zig");
-const Population = genAlg.Population;
 
 const numerics = @import("numerics.zig");
 const Vector3 = numerics.Vector3;
@@ -9,10 +8,10 @@ const std = @import("std");
 const print = std.debug.print;
 
 
-fn printP (p:*Population(Vector4), i:usize) void
-{
-    print("{d}, fitness: {d}\n", .{p.population[i], p.fitness[i]});
-}
+// fn printP (p:*Population(Vector4), i:usize) void
+// {
+//     print("{d}, fitness: {d}\n", .{p.population[i], p.fitness[i]});
+// }
 
 fn initV (i:usize) Vector4 
 {
@@ -50,17 +49,26 @@ fn fit (v:Vector4) f64
 
 test "test genAlg" {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    var arena = std.heap.ArenaAllocator.init(gpa.allocator());
-    defer arena.deinit();
-    
-    var p = try Population(Vector4).init(gpa.allocator(), 10);
-    var m = try Population(Vector4).init(gpa.allocator(), 10);
 
-    p.initialize (initV);
-    p.mutate (mutV);
-    p.crossover (&m, cross);
-    p.constraint (consV);
-    p.fit (fit);
-    p.sortByFitness();
-    p.iteri (printP);    
+    const Population = genAlg.Population(Vector4, initV, fit, mutV, consV, cross, undefined);
+    
+    var p = try Population.init(gpa.allocator(), 30);
+    var m = try Population.init(gpa.allocator(), 30);
+    defer p.deinit();
+    defer m.deinit();
+
+    for (0..100) |_| 
+    {
+        p.initialize ();
+        p.mutate ();
+        p.crossover (&m);
+        p.constraint ();
+        p.fit ();
+        p.sortByFitness();        
+    }
+
+    for (p.population, p.fitness) |g, f|
+    {
+        print("{d}, fitness: {d}\n", .{g, f});        
+    }     
 }

@@ -1,7 +1,15 @@
 const std = @import("std");
 
 
-pub fn Population(comptime T:type) type
+pub fn Population(
+    comptime T:type,
+    comptime initializefn: *const fn (usize) T,
+    comptime fitnessfn:    *const fn (T) f64,
+    comptime mutationfn:   *const fn (T) T,
+    comptime constraintfn: *const fn (T) T,
+    comptime crossoverfn:  *const fn (T, T) [2]T,
+    comptime selectionfn:  *const fn (a:*@This(), b:*@This()) void,
+) type
 {
     return struct 
     {
@@ -10,7 +18,9 @@ pub fn Population(comptime T:type) type
         fitness:    []f64,
         
         capacity: usize,
-        count:    usize,   
+        count:    usize,                  
+
+        allocator: std.mem.Allocator,
 
         const Self = @This();
 
@@ -19,11 +29,19 @@ pub fn Population(comptime T:type) type
             return .{
                 .population = try allocator.alloc(T, n),
                 .generation = try allocator.alloc(i32, n),
-                .fitness = try allocator.alloc(f64, n),
+                .fitness    = try allocator.alloc(f64, n),
                 .count = 0,
                 .capacity = n,
+                .allocator = allocator,
             }; 
         }  
+
+        pub fn deinit (s:Self) void
+        {
+            s.allocator.free(s.population);
+            s.allocator.free(s.generation);
+            s.allocator.free(s.fitness);
+        }
 
         inline fn swap (s:*Self, a:usize, b:usize) void
         {
@@ -69,35 +87,29 @@ pub fn Population(comptime T:type) type
             for (0..s.count) |i| f(s, i);            
         }
 
-        pub const initialfn    = *const fn (usize) T;
-        pub const fitnessfn    = *const fn (T) f64;
-        pub const mutationfn   = *const fn (T) T;
-        pub const constraintfn = *const fn (T) T;
-        pub const crossoverfn  = *const fn (T, T) [2]T;
-        pub const selectionfn  = *const fn (Population(T), Population(T)) void; 
 
-        pub fn initialize (s:*Self, f:initialfn) void
+        pub fn initialize (s:*Self) void
         {
-            for (0..s.capacity) |i| s.population[i] = f (i);
+            for (0..s.capacity) |i| s.population[i] = initializefn (i);
             s.count = s.capacity;
         }
 
-        pub fn fit (s:*Self, f:fitnessfn) void
+        pub fn fit (s:*Self) void
         {
-            for (0..s.count) |i| s.fitness[i] = f (s.population[i]);
+            for (0..s.count) |i| s.fitness[i] = fitnessfn (s.population[i]);
         }
 
-        pub fn mutate (s:*Self, f:mutationfn) void
+        pub fn mutate (s:*Self) void
         {
-            for (0..s.count) |i| s.population[i] = f (s.population[i]);
+            for (0..s.count) |i| s.population[i] = mutationfn (s.population[i]);
         }
 
-        pub fn constraint (s:*Self, f:constraintfn) void
+        pub fn constraint (s:*Self) void
         {
-            for (0..s.count) |i| s.population[i] = f (s.population[i]);
+            for (0..s.count) |i| s.population[i] = constraintfn (s.population[i]);
         }
 
-        pub fn crossover (a:*Self, b:*Self, f:crossoverfn) void
+        pub fn crossover (a:*Self, b:*Self) void
         {
             const len = if (b.count % 2 == 0) b.count else b.count - 1;
             var i: usize = 0;
@@ -105,16 +117,16 @@ pub fn Population(comptime T:type) type
             {
                 const pA = b.population[i + 0];
                 const pB = b.population[i + 1];
-                const cs = f (pA, pB);
+                const cs = crossoverfn (pA, pB);
                 
                 a.population[i + 0] = cs[0];
                 a.population[i + 1] = cs[1];
             }
         }
 
-        pub fn selection (a:*Self, b:*Self, f:selectionfn) void
+        pub fn selection (a:*Self, b:*Self) void
         {
-            f (a, b);
+            selectionfn (a, b);
         }
     };
 }
