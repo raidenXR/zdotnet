@@ -18,28 +18,16 @@ pub const Plane = [4]f32;
 pub const vec2 = struct 
 {
     /// Returns the vector (0,0).
-    pub fn zero () Vector2 
-    {
-        return Vector2{0.0 ,0.0};
-    }
+    pub const Zero = Vector2{0.0, 0.0};
 
     /// Returns the vector (1,1).
-    pub fn one () Vector2 
-    {
-        return Vector2{1.0, 1.0};
-    }
-
+    pub const One = Vector2{1.0, 1.0};
+    
     /// Returns the vector (1,0).
-    pub fn unitX () Vector2
-    {
-        return Vector2{1.0, 0.0};        
-    }
+    pub const UnitX = Vector2{1.0, 0.0};        
 
     /// Returns the vector (0,1).
-    pub fn unitY () Vector2 
-    {
-        return Vector2{0.0, 1.0};
-    }
+    pub const UnitY = Vector2{0.0, 1.0};
 
     // ###################################################
     // Intrisics
@@ -189,34 +177,19 @@ pub const vec2 = struct
 pub const vec3 = struct 
 {
     /// Returns the vector (0,0,0).
-    pub fn zero () Vector3 
-    {
-        return Vector3{0.0 ,0.0, 0.0};
-    }
+    pub const Zero = Vector3{0.0, 0.0, 0.0};
 
     /// Returns the vector (1,1,1).
-    pub fn one () Vector3 
-    {
-        return Vector3{1.0, 1.0, 1.0};
-    }
+    pub const One = Vector3{1.0, 1.0, 1.0};
 
     /// Returns the vector (1,0,0).
-    pub fn unitX () Vector3
-    {
-        return Vector3{1.0, 0.0, 0.0};        
-    }
+    pub const UnitX = Vector3{1.0, 0.0, 0.0};
 
     /// Returns the vector (0,1,0).
-    pub fn unitY () Vector3 
-    {
-        return Vector3{0.0, 1.0, 0.0};
-    }
+    pub const UnitY = Vector3{0.0, 1.0, 0.0};
 
     /// Returns the vector (0,0,1).
-    pub fn unitZ () Vector3 
-    {
-        return Vector3{0.0, 0.0, 1.0};
-    }
+    pub const UnitZ = Vector3{0.0, 0.0, 1.0};
 
     // ###################################################
     // Intrisics
@@ -387,40 +360,22 @@ pub const vec3 = struct
 pub const vec4 = struct 
 {
     /// Returns the vector (0,0,0,0).
-    pub fn zero () Vector4 
-    {
-        return Vector4{0.0 ,0.0, 0.0, 0.0};
-    }
+    pub const Zero = Vector4{0.0, 0.0, 0.0, 0.0};
 
     /// Returns the vector (1,1,1,1).
-    pub fn one () Vector4 
-    {
-        return Vector4{1.0, 1.0, 1.0, 1.0};
-    }
+    pub const One = Vector4{1.0, 1.0, 1.0, 1.0};
 
-    /// Returns the vector (1,0,0,0,0).
-    pub fn unitX () Vector4
-    {
-        return Vector4{1.0, 0.0, 0.0, 0.0};        
-    }
+    /// Returns the vector (1,0,0,0).
+    pub const UnitX = Vector4{1.0, 0.0, 0.0, 0.0};
 
     /// Returns the vector (0,1,0,0).
-    pub fn unitY () Vector4 
-    {
-        return Vector4{0.0, 1.0, 0.0, 0.0};
-    }
+    pub const UnitY = Vector4{0.0, 1.0, 0.0, 0.0};
 
     /// Returns the vector (0,0,1,0).
-    pub fn unitZ () Vector4 
-    {
-        return Vector4{0.0, 0.0, 1.0, 0.0};
-    }
+    pub const UnitZ = Vector4{0.0, 0.0, 1.0, 0.0};
 
     /// Returns the vector (0,0,0,1).
-    pub fn unitW () Vector4
-    {
-        return Vector4{0.0, 0.0, 0.0, 1.0};
-    }
+    pub const UnitW = Vector4{0.0, 0.0, 0.0, 1.0};
 
     // ###################################################
     // Intrisics
@@ -737,7 +692,7 @@ pub const mat3x2 = struct
     /// Returns the multiplicative identity matrix.
     pub fn identity () Matrix3x2
     {
-        return Matrix4x4{
+        return Matrix3x2{
             1.0, 0.0,
             0.0, 1.0,
             0.0, 0.0,
@@ -757,7 +712,7 @@ pub const mat3x2 = struct
     /// Creates a translation matrix.
     pub fn createTranslation (position:Vector2) Matrix3x2
     {
-        return Matrix4x4{
+        return Matrix3x2{
             1.0, 0.0,
             0.0, 1.0,
             position[0], position[1],
@@ -767,7 +722,7 @@ pub const mat3x2 = struct
     /// Creates a scaling matrix.
     pub fn createScale (xscale:f32, yscale:f32) Matrix3x2
     {
-        return Matrix4x4{
+        return Matrix3x2{
             xscale, 0.0,
             0.0, yscale,
             0.0, 0.0,
@@ -780,7 +735,7 @@ pub const mat3x2 = struct
         const tx = center_point[0] * (1.0 - xscale);
         const ty = center_point[1] * (1.0 - yscale);
         
-        return Matrix4x4{
+        return Matrix3x2{
             xscale, 0.0,
             0.0, yscale,
             tx, ty,
@@ -866,9 +821,9 @@ pub const mat3x2 = struct
     }
 
     /// Linearly interpolates between the corresponding values of two matrices.
-    pub fn lerp (m1:Matrix3x2, m2:Matrix3x2, amount:f32) f32
+    pub fn lerp (m1:Matrix3x2, m2:Matrix3x2, amount:f32) Matrix3x2
     {
-        return Matrix4x4{
+        return Matrix3x2{
             // First row
             m1[0] + (m2[0] - m1[0]) * amount,
             m1[1] + (m2[1] - m1[1]) * amount,
@@ -991,6 +946,7 @@ pub const mat4x4 = struct
             zaxis[1],
             zaxis[2],
             0.0,
+            0.0, 0.0, 0.0, 0.0,
         };
     }
 
@@ -1056,6 +1012,7 @@ pub const mat4x4 = struct
             zaxis[1],
             zaxis[2],
             0.0,
+            0.0, 0.0, 0.0, 0.0,
         };
     }
 
