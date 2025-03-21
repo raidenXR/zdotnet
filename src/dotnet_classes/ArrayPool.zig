@@ -23,7 +23,7 @@ inline fn getMaxSizeForBucket (binIndex:usize) usize
 
 inline fn id (ptr:anytype) usize
 {
-    const _ptr: *anyopaque = @ptrCast(ptr);
+    const _ptr: [*]const u8 = @ptrCast(ptr);
     return @intFromPtr(_ptr);
 }
 
@@ -59,11 +59,10 @@ pub fn create(comptime T:type, maxArrayLenght:usize, maxArraysPerBucket:usize) t
         fn init() void 
         {
             // get hashcode()
-            var pool_id: usize = 0;
+            const pool_id = id(&@This());
             const max_buckets = selectBucketIndex(_max_array_len);
             const buckets = allocator.alloc(Bucket, max_buckets + 1) catch @panic("allocator failed");
             for (buckets, 0..) |*bucket, i| {
-                pool_id = i;
                 bucket.* = Bucket.init(getMaxSizeForBucket(i), maxArraysPerBucket, pool_id);
             }
             _buckets = buckets;            
