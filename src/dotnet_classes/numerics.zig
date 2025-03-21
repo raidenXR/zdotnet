@@ -146,9 +146,9 @@ pub const vec2 = struct
     }
     
     /// Transforms a vector normal by the given matrix.
-    pub fn transformNormal (normal:Vector2, m:Matrix4x4) Vector2
+    pub fn transformNormal (normal:Vector2, m:Matrix3x2) Vector2
     {
-        return Vector3{
+        return Vector2{
             normal[0] * m[0] + normal[1] * m[4],
             normal[0] * m[1] + normal[1] * m[5],
         };        
@@ -167,7 +167,7 @@ pub const vec2 = struct
         const yy2 = rotation[1] * y2;
         const zz2 = rotation[2] * z2;
 
-        return Vector3{
+        return Vector2{
             v[0] * (1.0 - yy2 - zz2) + v[1] * (xy2 - wz2),
             v[0] * (xy2 + wz2) + v[1] * (1.0 - xx2 - zz2),
         };
@@ -690,22 +690,18 @@ pub const plane = struct
 pub const mat3x2 = struct
 {
     /// Returns the multiplicative identity matrix.
-    pub fn identity () Matrix3x2
-    {
-        return Matrix3x2{
-            1.0, 0.0,
-            0.0, 1.0,
-            0.0, 0.0,
-        };
-    }
+    pub const identity = Matrix3x2{
+        1.0, 0.0,
+        0.0, 1.0,
+        0.0, 0.0,
+    };
 
     /// Returns whether the matrix is the identity matrix.
     pub fn isIdentity (m:Matrix4x4) bool
     {
-        const _identity = identity();
         var _is_identity = true;
 
-        for (m, _identity) |b0, b1| _is_identity = _is_identity and b0 and b1;
+        for (m, identity) |b0, b1| _is_identity = _is_identity and b0 and b1;
         return _is_identity;
     }
     
@@ -888,23 +884,19 @@ pub const mat3x2 = struct
 pub const mat4x4 = struct 
 {
     /// Returns the multiplicative identity matrix.
-    pub fn identity () Matrix4x4
-    {
-        return Matrix4x4{
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 1.0,
-        };
-    }
+    pub const identity = Matrix4x4{
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0,
+    };
 
     /// Returns whether the matrix is the identity matrix.
     pub fn isIdentity (m:Matrix4x4) bool
     {
-        const _identity = identity();
         var _is_identity = true;
 
-        for (m, _identity) |b0, b1| _is_identity = _is_identity and b0 and b1;
+        for (m, identity) |b0, b1| _is_identity = _is_identity and b0 and b1;
         return _is_identity;
     }
 

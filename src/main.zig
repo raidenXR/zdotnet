@@ -4,11 +4,10 @@
 const std = @import("std");
 const print = std.debug.print;
 
-// const numerics = @import("dotnet_classes/numerics.zig");
+const numerics = @import("dotnet_classes/numerics.zig");
 
-usingnamespace @import("dotnet_classes/numerics.zig");
 
-var v4 = Vector4{};
+var v4 = numerics.Vector4{};
 
 pub const Camera = struct 
 {
@@ -207,4 +206,7 @@ pub fn main() !void {
 
     const b0 = std.mem.zeroes([10]u8);
     print("buffer: {any}\n", .{b0});
+
+    const v = numerics.vec2.transformNormal(numerics.vec2.Zero, numerics.mat3x2.identity);
+    _ = v;
 }
