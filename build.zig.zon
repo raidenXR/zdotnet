@@ -14,7 +14,7 @@
     .paths = .{
         "build.zig",
         "build.zig.zon",
-        "src/dotnet_classes",
+        "src",
         // For example...
         //"LICENSE",
         //"README.md",

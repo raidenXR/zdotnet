@@ -10,7 +10,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     _ = b.addModule("dotnet", .{
-        .root_source_file = b.path("src/dotnet_classes/dotnet.zig"),
+        .root_source_file = b.path("src/dotnet.zig"),
         .target = target,
         .optimize = optimize,
     });
