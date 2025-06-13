@@ -1,6 +1,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const String = @import("String.zig");
+const print = std.debug.print;
+const assert = std.debug.assert;
 
 ptr: [*]u8,
 len: usize,
@@ -178,4 +180,37 @@ fn slice (sb:StringBuilder, position:usize) []const u8
 fn string (ctx:anytype) []const u8
 {
     return ctx.toString();
+}
+
+
+test "test StringBuilder" {
+    const allocator = gpa.allocator();
+    var sb = StringBuilder.init(allocator, 1024);
+    defer sb.deinit();
+
+    sb.appendLine("some line 0");
+    sb.appendLine("some line 1");
+    sb.appendLine("some line 2");
+    sb.appendLine("some line 3");
+    sb.appendLine("some line 4");
+    sb.appendLine("some line 5");
+
+    sb.remove(10,14);
+    sb.insert(7, "insert some substr");
+    sb.replace("some", "new_some");
+    sb.appendFormat("some formated str: {d:.2}, v:{s}, z{any}\n", .{45.94320, "sss", &[_]u8{1,3,1,7}});
+
+    const str = sb.toString(allocator);
+    defer allocator.free(str);
+    print("{s}\n", .{str});
+}
+
+
+test "trim No Alloc" {
+    const str: []const u8 = "    Some random string to test   ";
+    const a = String.trimNoAlloc(str, ' ');
+    const b = String.trimEndNoAlloc(str, ' ');
+    const c = String.trimStartNoAlloc(str, ' ');
+
+    print ("\na: {s}\nb: {s}\nc:{s}\n", .{a, b, c});
 }

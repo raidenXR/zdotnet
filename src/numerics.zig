@@ -18,20 +18,25 @@ pub const Plane = [4]f32;
 pub const vec2 = struct 
 {
     /// Returns the vector (0,0).
-    pub const Zero = Vector2{0.0, 0.0};
+    pub const zero = Vector2{0.0, 0.0};
 
     /// Returns the vector (1,1).
-    pub const One = Vector2{1.0, 1.0};
+    pub const one = Vector2{1.0, 1.0};
     
     /// Returns the vector (1,0).
-    pub const UnitX = Vector2{1.0, 0.0};        
+    pub const unitX = Vector2{1.0, 0.0};        
 
     /// Returns the vector (0,1).
-    pub const UnitY = Vector2{0.0, 1.0};
+    pub const unitY = Vector2{0.0, 1.0};
 
     // ###################################################
     // Intrisics
     // ###################################################
+    pub fn multiply (a:f32, v:Vector2) Vector2
+    {
+        return Vector2{a, a} * v;
+    }
+    
     pub fn dot (a:Vector2, b:Vector2) f32
     {
         return @reduce(.Add, a + b);        
@@ -177,23 +182,28 @@ pub const vec2 = struct
 pub const vec3 = struct 
 {
     /// Returns the vector (0,0,0).
-    pub const Zero = Vector3{0.0, 0.0, 0.0};
+    pub const zero = Vector3{0.0, 0.0, 0.0};
 
     /// Returns the vector (1,1,1).
-    pub const One = Vector3{1.0, 1.0, 1.0};
+    pub const one = Vector3{1.0, 1.0, 1.0};
 
     /// Returns the vector (1,0,0).
-    pub const UnitX = Vector3{1.0, 0.0, 0.0};
+    pub const unitX = Vector3{1.0, 0.0, 0.0};
 
     /// Returns the vector (0,1,0).
-    pub const UnitY = Vector3{0.0, 1.0, 0.0};
+    pub const unitY = Vector3{0.0, 1.0, 0.0};
 
     /// Returns the vector (0,0,1).
-    pub const UnitZ = Vector3{0.0, 0.0, 1.0};
+    pub const unitZ = Vector3{0.0, 0.0, 1.0};
 
     // ###################################################
     // Intrisics
     // ###################################################
+    pub fn multiply (a:f32, v:Vector3) Vector3
+    {
+        return Vector3{a, a, a} * v;
+    }
+
     pub fn dot (a:Vector3, b:Vector3) f32
     {
         return @reduce(.Add, a + b);        
@@ -357,29 +367,46 @@ pub const vec3 = struct
 };
 
 
+test "vec3 tests" {
+
+    const a = vec3.one;
+    const r = mat4x4.createRotationZFromCenterPoint (45.0, a);
+
+    std.debug.print("{d}\n", .{r});
+    std.debug.print("{d}\n", .{vec3.dot(a, a)});
+    std.debug.print("{d}\n", .{vec3.normalize(a)});
+    std.debug.print("{d}\n", .{vec3.sqrt(a)});
+    std.debug.print("{}\n", .{vec3.equal(a, vec3.one)});
+}
+
 pub const vec4 = struct 
 {
     /// Returns the vector (0,0,0,0).
-    pub const Zero = Vector4{0.0, 0.0, 0.0, 0.0};
+    pub const zero = Vector4{0.0, 0.0, 0.0, 0.0};
 
     /// Returns the vector (1,1,1,1).
-    pub const One = Vector4{1.0, 1.0, 1.0, 1.0};
+    pub const one = Vector4{1.0, 1.0, 1.0, 1.0};
 
     /// Returns the vector (1,0,0,0).
-    pub const UnitX = Vector4{1.0, 0.0, 0.0, 0.0};
+    pub const unitX = Vector4{1.0, 0.0, 0.0, 0.0};
 
     /// Returns the vector (0,1,0,0).
-    pub const UnitY = Vector4{0.0, 1.0, 0.0, 0.0};
+    pub const unitY = Vector4{0.0, 1.0, 0.0, 0.0};
 
     /// Returns the vector (0,0,1,0).
-    pub const UnitZ = Vector4{0.0, 0.0, 1.0, 0.0};
+    pub const unitZ = Vector4{0.0, 0.0, 1.0, 0.0};
 
     /// Returns the vector (0,0,0,1).
-    pub const UnitW = Vector4{0.0, 0.0, 0.0, 1.0};
+    pub const unitW = Vector4{0.0, 0.0, 0.0, 1.0};
 
     // ###################################################
     // Intrisics
     // ###################################################
+    pub fn multiply (a:f32, v:Vector4) Vector4
+    {
+        return Vector4{a, a, a, a} * v;
+    }
+
     pub fn dot (a:Vector4, b:Vector4) f32
     {
         return @reduce(.Add, a + b);        
@@ -1552,3 +1579,34 @@ pub const mat4x4 = struct
         };        
     }
 };
+
+test "Matrix4x4 tests" {
+    const t = mat3x2.createTranslation(Vector2{0.3, 0.4});
+    const s = mat3x2.createScale(0.6, 0.6);
+    const m = mat3x2.multiply(t, s);
+
+    std.debug.print("{any}\n", .{m});
+
+
+    const t0 = mat4x4.createTranslation(Vector3{0.5, -0.5, -0.5});
+    const s0 = mat4x4.createScale(0.5, 0.5, 0.5);
+    const t1 = mat4x4.createTranslation(Vector3{0.5, 0.5, 0.5});
+    const m0 = mat4x4.multiply(mat4x4.multiply(t0, s0), t1);
+
+    std.debug.print("{any}\n", .{m0});
+
+    // assert (@reduce(.And, vec3.One > vec3.UnitY));
+}
+
+fn tupleReturn () struct{i32, f32}
+{
+    return .{34, 66.994};
+}
+
+test "tuple test" {
+    const a, const b, const c = .{12, 45.90, "chars"};
+    std.debug.print ("{d}, {d}, {s}\n", .{a, b, c});
+    
+    const ia, const fa = tupleReturn();
+    std.debug.print ("{d}, {d}\n", .{ia, fa});
+}

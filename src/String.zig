@@ -1,5 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const print = std.debug.print;
+const assert = std.debug.assert;
 
 
 pub const Empty: []const u8 = &[0]u8{};
@@ -40,10 +42,12 @@ pub fn concat (allocator:Allocator, values:[]const[]const u8) []const u8
 /// Returns a value indicating whether a specified string occurs within this string.
 pub fn contains (s:[]const u8, a:[]const u8) bool
 {
+    if (a.len == s.len) return std.mem.eql(u8, s, a);
+    
     if (a.len > s.len) return false;
 
     var n: usize = 0;
-    while (n + a.len < s.len) : (n += 1) 
+    while (n + a.len <= s.len) : (n += 1) 
     {
         if (std.mem.eql(u8, s[n..n + a.len], a)) return true;
     }
@@ -204,6 +208,19 @@ pub fn trim (allocator:Allocator, s:[]const u8, char:u8) []const u8
     return buffer;
 }
 
+
+/// Removes all leading and trailing instances of a character from the current string.
+pub fn trimNoAlloc (s:[]const u8, char:u8) []const u8
+{
+    var l: usize = 0;
+    var r: usize = s.len - 1;
+
+    while (l < s.len and s[l] == char) l += 1;
+    while (r > 0 and s[r] == char) r -= 1;   
+
+    return s[l..r + 1];
+}
+
 /// Removes all the trailing occurrences of a set of characters specified in an array from the current string.
 pub fn trimEnd (allocator:Allocator, s:[]const u8, char:u8) []const u8 
 {
@@ -215,6 +232,17 @@ pub fn trimEnd (allocator:Allocator, s:[]const u8, char:u8) []const u8
     @memcpy (buffer, s[0..r]);
     
     return buffer;
+}
+
+
+/// Removes all the trailing occurrences of a set of characters specified in an array from the current string.
+pub fn trimEndNoAlloc (s:[]const u8, char:u8) []const u8 
+{
+    var r: usize = s.len - 1;
+
+    while (r > 0 and s[r] == char) r -= 1;
+    
+    return s[0..r + 1];
 }
 
 /// Removes all the leading occurrences of a specified character from the current string.
@@ -231,7 +259,164 @@ pub fn trimStart (allocator:Allocator, s:[]const u8, char:u8) []const u8
     return buffer;
 }
 
+
+/// Removes all the leading occurrences of a specified character from the current string.
+pub fn trimStartNoAlloc (s:[]const u8, char:u8) []const u8
+{
+    var l: usize = 0;
+
+    while (l < s.len and s[l] == char) l += 1;
+
+    return s[l..];
+}
+
 pub fn asSpan (s:[]const u8, start:usize, len:usize) []const u8
 {
     return s[start..start + len];
+}
+
+
+// tests
+
+test "test trim" {
+    const str = "   some string   ";
+    const s = trimNoAlloc(str, ' ');
+    std.debug.print("-{s}-\n", .{s});
+    
+    const num = " -34.124 ";
+    const sn = trimNoAlloc(num, ' ');
+    const n = try std.fmt.parseFloat(f32, sn);
+    std.debug.print("|{d}|\n", .{n});    
+}
+
+test "test contains" {
+    const str = "TriangleList";
+    if (contains(str, "TriangleList"))
+    {
+        std.debug.print("contains is fine.\n", .{});
+    }
+    else
+    {
+        std.debug.print("contains failed, len: {d}\n", .{str.len});
+    }
+}
+
+
+test "test String.concat" {
+    const str0 = "some line with l0\n";
+    const str1 = "some line with l1\n";
+    const str2 = "some line with l2\n";
+    const str3 = "some line with l3\n";
+    
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    const str = concat(allocator, &[_][]const u8{str0, str1, str2, str3});
+
+    print("{s}\n", .{str});
+
+    allocator.free(str);
+}
+
+test "test String.contains and String.endsWith and String.StartsWith" {
+    const a = "some bigger string";
+
+    assert (contains(a, "igg"));
+    assert (endsWith(a, "ing"));
+    assert (startsWith(a, "som"));
+}
+
+test "test String.equals and String.isEmpty" {
+    const s = Empty;
+    const b = "";
+
+    assert (equals(s,b));
+    assert (isEmpty(s));
+    assert (isEmpty(b));
+}
+
+test "test String.indexOf and String.lastIndexOf" {
+    const s = "0abcdefghig";
+    const h = 8;
+    assert (indexOf(s,'h') == h);
+    assert (lastIndexOf(s, 'g') == s.len - 1);
+}
+
+
+
+test "test String.join" {
+    const s0 = "s0";
+    const s1 = "s1";
+    const s2 = "s2";
+    const s3 = "s3";
+    const s4 = "s3";
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    const str = join(allocator, "+", &.{s0, s1, s2, s3, s4});
+    defer allocator.free(str);
+    print ("{s}\n", .{str});
+}
+
+test "String.padLeft and String.padRight" {
+    const str = "some line string";
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    const str_l = padLeft(allocator, str, 5, '-');
+    const str_r = padRight(allocator, str, 5, '-');
+
+    print("pad left: {s}\n", .{str_l});
+    print("pad right: {s}\n", .{str_r});
+
+    allocator.free(str_l);
+    allocator.free(str_r);
+}
+
+test "test String.split" {
+    const str =
+        \\ some line with l0
+        \\ some line with l1
+        \\ some line with l2    
+        \\ some line with l2
+    ;
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    const lines = split(allocator, str, &[_]u8{'\n','l'}); 
+    // defer for (lines) |line| allocator.free(line);   
+    
+    for (lines) |line|
+    {
+        print("{s}\n", .{line});
+    }
+}
+
+test "test String.toLower and String.toUpper" {
+    const s = "sOme String with Uppercast and Letters";
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    const s_upper = toUpper(allocator, s);
+    const s_lower = toLower(allocator, s);
+
+    print("{s}\n", .{s_upper});
+    print("{s}\n", .{s_lower});
+
+    allocator.free(s_upper);
+    allocator.free(s_lower);
+}
+
+test "test String.trim" {
+    const s = "---some string with -- charts---";
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    const s_lhs = trimStart(allocator, s, '-');
+    const s_rhs = trimEnd(allocator, s, '-');
+    const s_cen = trim(allocator, s, '-');
+
+    print("{s}\n", .{s_lhs});
+    print("{s}\n", .{s_rhs});
+    print("{s}\n", .{s_cen});
+
+    allocator.free(s_lhs);
+    allocator.free(s_rhs);
+    allocator.free(s_cen);
 }
