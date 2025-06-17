@@ -39,7 +39,7 @@ pub const vec2 = struct
     
     pub fn dot (a:Vector2, b:Vector2) f32
     {
-        return @reduce(.Add, a + b);        
+        return @reduce(.Add, a * b);        
     }
 
     pub fn equal(a:Vector2, b:Vector2) bool
@@ -177,6 +177,13 @@ pub const vec2 = struct
             v[0] * (xy2 + wz2) + v[1] * (1.0 - xx2 - zz2),
         };
     }
+
+    pub fn print (v:Vector2) void
+    {
+        std.debug.print("[", .{});
+        for (0..2) |i| std.debug.print("{d} ", .{v[i]});
+        std.debug.print("]\n", .{});
+    }
 };
 
 pub const vec3 = struct 
@@ -206,7 +213,7 @@ pub const vec3 = struct
 
     pub fn dot (a:Vector3, b:Vector3) f32
     {
-        return @reduce(.Add, a + b);        
+        return @reduce(.Add, a * b);        
     }
 
     pub fn equal(a:Vector3, b:Vector3) bool
@@ -364,6 +371,13 @@ pub const vec3 = struct
             v[0] * (xz2 - wy2) + v[1] * (yz2 + wx2) + v[2] * (1.0 - xx2 + yy2),
         };
     }
+
+    pub fn print (v:Vector3) void
+    {
+        std.debug.print("[", .{});
+        for (0..3) |i| std.debug.print("{d} ", .{v[i]});
+        std.debug.print("]\n", .{});
+    }
 };
 
 
@@ -409,7 +423,7 @@ pub const vec4 = struct
 
     pub fn dot (a:Vector4, b:Vector4) f32
     {
-        return @reduce(.Add, a + b);        
+        return @reduce(.Add, a * b);        
     }
 
     pub fn equal (a:Vector4, b:Vector4) bool
@@ -707,7 +721,22 @@ pub const quaternion = struct
             q1w * q2w - _dot,           
         };
     }
+
+    pub fn print (v:Vector4) void
+    {
+        std.debug.print("[", .{});
+        for (0..4) |i| std.debug.print("{d} ", .{v[i]});
+        std.debug.print("]\n", .{});
+    }
 };
+
+test "test vec3" {
+    const a = Vector3{3,4,5};
+    const b = Vector3{8,9,1};
+
+    vec3.print(vec3.cross(a, b));
+    std.debug.print("dot: {d}\n", .{vec3.dot(a, b)});
+}
 
 pub const plane = struct
 {
@@ -906,7 +935,38 @@ pub const mat3x2 = struct
             m1[4] * m2[1] + m1[5] * m2[3] + m2[5],
         };        
     }
+    
+    pub fn print (m:Matrix3x2) void
+    {
+        for (0..3) |i|
+        {
+            for (0..2) |j|
+            {
+                std.debug.print("{d} ", .{m[i * 2 + j]});            
+            }        
+            std.debug.print("\n", .{});            
+        }
+        std.debug.print("\n", .{});                
+    }
 };
+
+
+test "test mat3x2.multiply" {
+    const a = Matrix3x2{
+        1, 2, 
+        3, 4,
+        5, 6,
+    };
+    const b = Matrix3x2{
+        1, 0,
+        0, 1,
+        1, 1,
+    };
+    const c = mat3x2.multiply(a, b);
+
+    std.debug.print("mat3x2.multiply: \n", .{});            
+    mat3x2.print(c);
+}
 
 pub const mat4x4 = struct 
 {
@@ -1211,10 +1271,10 @@ pub const mat4x4 = struct
         const xscale = yscale / aspect_ration;
 
         return Matrix4x4{
-            xscale, 0.0, 0.0, 0.0,
-            0.0, yscale, 0.0, 0.0,
-            0.0, 0.0, (far_plane_distance / (near_plane_distance - far_plane_distance)), -1.0,
-            0.0, 0.0, (near_plane_distance * far_plane_distance / (near_plane_distance - far_plane_distance)), 0.0,
+            xscale, 0, 0, 0,
+            0, yscale, 0, 0,
+            0, 0, (far_plane_distance / (near_plane_distance - far_plane_distance)), -1,
+            0, 0, (near_plane_distance * far_plane_distance) / (near_plane_distance - far_plane_distance), 0.0,
         };
     }
 
@@ -1285,9 +1345,9 @@ pub const mat4x4 = struct
         const yaxis = vec3.cross (zaxis, xaxis);
 
         return Matrix4x4{
-            xaxis[0], yaxis[0], zaxis[0], 0.0,
-            xaxis[1], yaxis[1], zaxis[1], 0.0,
-            xaxis[2], yaxis[2], zaxis[2], 0.0,
+            xaxis[0], yaxis[0], zaxis[0], 0,
+            xaxis[1], yaxis[1], zaxis[1], 0,
+            xaxis[2], yaxis[2], zaxis[2], 0,
             -vec3.dot(xaxis, camera_position),
             -vec3.dot(yaxis, camera_position),
             -vec3.dot(zaxis, camera_position),
@@ -1578,7 +1638,41 @@ pub const mat4x4 = struct
             m1[12] * m2[3] + m1[13] * m2[7] + m1[14] * m2[11] + m1[15] * m2[15],    
         };        
     }
+    
+    pub fn print (m:Matrix4x4) void
+    {
+        for (0..4) |i|
+        {
+            for (0..4) |j|
+            {
+                std.debug.print("{d} ", .{m[i * 4 + j]});            
+            }        
+            std.debug.print("\n", .{});            
+        }
+        std.debug.print("\n", .{});            
+    
+    }
 };
+
+
+test "test mat4x4.multiply" {
+    const a = Matrix4x4{
+        1, 3, 4, 5,
+        0, 1, 2, 9,
+        1, 1, 1, 1,
+        4, 4, 7, 1,
+    };
+    const b = Matrix4x4{
+        2, 2, 2, 2,
+        1, 2, 3, 3,
+        7, 7, 2, 7,
+        8, 9, 3, 2,
+    };
+    const c = mat4x4.multiply(a, b);
+
+    std.debug.print("mat4x4.multiply: \n", .{});            
+    mat4x4.print(c);
+}
 
 test "Matrix4x4 tests" {
     const t = mat3x2.createTranslation(Vector2{0.3, 0.4});

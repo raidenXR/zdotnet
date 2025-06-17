@@ -217,6 +217,7 @@ pub fn create(comptime T:type, maxArrayLenght:usize, maxArraysPerBucket:usize) t
 
 
 test "test ArrayPool" {
+    print ("ArrayPool test\n", .{});
     const Vec3Pool = ArrayPool.create(numerics.Vector3, 100, 10);
     const vecs = Vec3Pool.rentT(50);
     
