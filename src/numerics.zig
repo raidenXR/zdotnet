@@ -1,6 +1,6 @@
 const std = @import("std");
 const PI = std.math.pi;
-const EPSILON = std.math.e;
+const EPSILON = 1.401298E-45;
 
 pub const Vector2 = @Vector(2, f32);
 pub const Vector3 = @Vector(3, f32);
@@ -419,6 +419,11 @@ pub const vec4 = struct
     pub fn multiply (a:f32, v:Vector4) Vector4
     {
         return Vector4{a, a, a, a} * v;
+    }
+
+    pub fn multiplyAddEstimate (left:Vector4, right:Vector4, addend:Vector4) Vector4
+    {
+        return (left + right) + addend;
     }
 
     pub fn dot (a:Vector4, b:Vector4) f32
@@ -858,15 +863,15 @@ pub const mat3x2 = struct
             return false;
         }
 
-        const invDet = 1.0 / det;
+        const inv_det = 1.0 / det;
 
         result.* = Matrix3x2{
-            m[3] * invDet,
-            -m[1] * invDet,
-            -m[2] * invDet,
-            m[0] * invDet,
-            (m[2] * m[5] - m[4] * m[3]) * invDet,
-            (m[4] * m[1] - m[0] * m[5]) * invDet,           
+            m[3] * inv_det,
+            -m[1] * inv_det,
+            -m[2] * inv_det,
+            m[0] * inv_det,
+            (m[2] * m[5] - m[4] * m[3]) * inv_det,
+            (m[4] * m[1] - m[0] * m[5]) * inv_det,           
         };
 
         return true;            
@@ -970,6 +975,23 @@ test "test mat3x2.multiply" {
 
 pub const mat4x4 = struct 
 {
+    /// converts a series of Vector4 s to Matrix4x4
+    inline fn asm4x4 (x:Vector4, y:Vector4, z:Vector4, w:Vector4) Matrix4x4
+    {
+        var m: Matrix4x4 = undefined;
+        // for (0..4) |i| m[i + 0] = x[i];    
+        // for (0..4) |i| m[i + 4] = y[i];    
+        // for (0..4) |i| m[i + 8] = z[i];
+        // for (0..4) |i| m[i + 12] = w[i];
+
+        @memcpy(m[0..4], x);
+        @memcpy(m[4..8], y);
+        @memcpy(m[8..12], z);
+        @memcpy(m[12..16], w);
+
+        return m;    
+    }
+
     /// Returns the multiplicative identity matrix.
     pub const identity = Matrix4x4{
         1.0, 0.0, 0.0, 0.0,
@@ -1410,24 +1432,34 @@ pub const mat4x4 = struct
     }
 
     /// Creates a Matrix that flattens geometry into a specified Plane as if casting a shadow from a specified light source.
-    pub fn createShadom (light_direction:Vector3, p:Plane) Matrix4x4
+    pub fn createShadow (light_direction:Vector3, _plane:Plane) Matrix4x4
     {
-        _ = p; // autofix
+        var p = vec4.normalize(_plane);
+        const l = Vector4{light_direction[0], light_direction[1], light_direction[2], 0};
+        const dot = vec4.dot(p, l);        
     
-        _ = light_direction; // autofix
-        _ = plane; // autofix
-    
-        noreturn;
+        p = -p;
+        
+        const x = vec4.multiplyAddEstimate(l, .{p[0], p[0], p[0], p[0]}, .{dot, 0, 0, 0});
+        const y = vec4.multiplyAddEstimate(l, .{p[1], p[1], p[1], p[1]}, .{0, dot, 0, 0});
+        const z = vec4.multiplyAddEstimate(l, .{p[2], p[2], p[2], p[2]}, .{0, 0, dot, 0});
+        const w = vec4.multiplyAddEstimate(l, .{p[3], p[3], p[3], p[3]}, .{0, 0, 0, dot});
+        
+        return asm4x4(x, y, z, w);
     }
 
     /// Creates a Matrix that reflects the coordinate system about a specified Plane.
-    pub fn createReflection (p:Plane) Matrix4x4
+    pub fn createReflection (value:Plane) Matrix4x4
     {
-        _ = p; // autofix
-    
-        _ = plane; // autofix
-    
-        noreturn;
+        const p = vec4.normalize(value);
+        const s = p * Vector4{-2, -2, -2, 0};
+        
+        const x = vec4.multiplyAddEstimate(.{p[0], p[0], p[0], p[0]}, s, vec4.unitX);
+        const y = vec4.multiplyAddEstimate(.{p[1], p[1], p[1], p[1]}, s, vec4.unitY);
+        const z = vec4.multiplyAddEstimate(.{p[2], p[2], p[2], p[2]}, s, vec4.unitZ);
+        const w = vec4.multiplyAddEstimate(.{p[3], p[3], p[3], p[3]}, s, vec4.unitW);
+
+        return asm4x4(x, y, z, w);
     }
 
     /// Calculates the determinant of the matrix.
@@ -1464,12 +1496,129 @@ pub const mat4x4 = struct
     }
 
     /// Attempts to calculate the inverse of the given matrix. If successful, result will contain the inverted matrix.
+    /// https://github.com/microsoft/DirectXMath/blob/main/Inc/DirectXMathMatrix.inl#L782C1-L1004C2
     pub fn invert (matrix:Matrix4x4, result:*Matrix4x4) bool 
     {
-        _ = matrix; // autofix
-        _ = result; // autofix
-    
-        noreturn;
+        // _ = result; // autofix
+        // // load the matrix values into rows
+        // var row1: Vector4 = matrix[0..4];
+        // var row2: Vector4 = matrix[4..8];
+        // var row3: Vector4 = matrix[8..12];
+        // var row4: Vector4 = matrix[12..16];
+
+        // // transpose the matrix
+        // var temp1 = @shuffle(f32, row1, row2, @as(Vector4, @splat(0b01_00_01_00)));
+        // var temp2 = @shuffle(f32, row1, row2, @as(Vector4, @splat(0b11_10_11_10)));
+        // var temp3 = @shuffle(f32, row3, row4, @as(Vector4, @splat(0b01_00_01_00)));
+        // var temp4 = @shuffle(f32, row3, row4, @as(Vector4, @splat(0b11_10_11_10)));
+
+        // row1 = @shuffle(f32, temp1, temp2, @as(Vector4, @splat(0b10_00_10_00)));
+        // row2 = @shuffle(f32, temp1, temp2, @as(Vector4, @splat(0b11_01_11_01)));
+        // row3 = @shuffle(f32, temp3, temp4, @as(Vector4, @splat(0b10_00_10_00)));
+        // row4 = @shuffle(f32, temp3, temp4, @as(Vector4, @splat(0b11_01_11_01)));
+
+        // var v00 = Vector4{row3[0], row3[0], row3[1], row3[1]};
+        // var v10 = Vector4{row4[2], row4[3], row4[2], row4[3]};
+        // var v01 = Vector4{row1[0], row1[0], row1[1], row1[1]};
+        // var v11 = Vector4{row2[2], row2[3], row2[2], row2[3]};
+        // var v02 = @shuffle(f32, row3, row1, @as(Vector4, @splat(0b10_00_10_00)));
+        // var v12 = @shuffle(f32, row4, row2, @as(Vector4, @splat(0b11_01_11_01)));
+
+        // var d0 = v00 * v10;
+        // var d1 = v01 * v11;
+        // var d2 = v02 * v12;
+
+        // v00 = Vector4{row3[2], row3[3], row3[2], row3[2]};
+        // v10 = Vector4{row4[0], row4[0], row4[1], row4[1]};
+        // v01 = Vector4{row1[2], row1[3], row1[2], row1[2]};
+        // v11 = Vector4{row2[0], row2[0], row2[1], row2[1]};
+        // v02 = @shuffle(f32, row3, row1, @as(Vector4, @splat(0b11_01_11_01)));
+        // v12 = @shuffle(f32, row4, row2, @as(Vector4, @splat(0b10_00_10_00)));
+
+        // d0 = vec4.multiplyAddEstimate(-v00, v10, d0);
+        // d1 = vec4.multiplyAddEstimate(-v01, v12, d1);
+        // d2 = vec4.multiplyAddEstimate(-v02, v12, d2);
+
+        // https://source.dot.net/#System.Private.CoreLib/src/libraries/System.Private.CoreLib/src/System/Numerics/Matrix4x4.Impl.cs,1197
+        
+
+        // software fallback (prev is SIMD approach)
+        const a = matrix[0];
+        const b = matrix[1];
+        const c = matrix[2];
+        const d = matrix[3];
+        const e = matrix[4];
+        const f = matrix[5];
+        const g = matrix[6];
+        const h = matrix[7];
+        const i = matrix[8];
+        const j = matrix[9];
+        const k = matrix[10];
+        const l = matrix[11];
+        const m = matrix[12];
+        const n = matrix[13];
+        const o = matrix[14];
+        const p = matrix[15];
+
+        const kp_lo = k * p - l * o;
+        const jp_ln = j * p - l * n;
+        const jo_kn = j * o - k * n;
+        const ip_lm = i * p - l * m;
+        const io_km = i * o - k * m;
+        const in_jm = i * n - j * m;
+
+        const a11 = (f * kp_lo - g * jp_ln + h * jo_kn);
+        const a12 = -(e * kp_lo - g * ip_lm + h * io_km);
+        const a13 = (e * jp_ln - f * ip_lm + h * in_jm);
+        const a14 = -(e * jo_kn - f * io_km + g * in_jm);
+
+        const det = a * a11 + b * a12 + c * a13 + d * a14;
+
+        if (@abs(det) < EPSILON)
+        {
+            const vNaN: Vector4 = @splat(std.math.nan(f32));    
+            result.* = asm4x4(vNaN, vNaN, vNaN, vNaN);
+
+            return false;
+        }
+
+        const inv_det = 1.0 / det;
+
+        result[0] = a11 * inv_det;
+        result[4] = a12 * inv_det;
+        result[8] = a13 * inv_det;
+        result[12] = a14 * inv_det;
+        
+        result[1] = -(b * kp_lo - c * jp_ln + d * jo_kn) * inv_det;
+        result[5] = (a * kp_lo - c * ip_lm + d * io_km) * inv_det;
+        result[9] = -(a * jp_ln - b * ip_lm + d * in_jm) * inv_det;
+        result[13] = (a * jo_kn - b * io_km + c * in_jm) * inv_det;
+
+        const gp_ho = g * p - h * o;
+        const fp_hn = f * p - h * n;
+        const fo_gn = f * o - g * n;
+        const ep_hm = e * p - h * m;
+        const eo_gm = e * o - g * m;
+        const en_fm = e * n - f * m;
+
+        result[2] = (b * gp_ho - c * fp_hn + d * fo_gn) * inv_det;
+        result[6] = -(a * gp_ho - c * ep_hm + d * eo_gm) * inv_det;
+        result[10] = (a * fp_hn - b * ep_hm + d * en_fm) * inv_det;
+        result[14] = -(a * fo_gn - b * eo_gm + c * en_fm) * inv_det;
+
+        const gl_hk = g * l - h * k;
+        const fl_hj = f * l - h * j;
+        const fk_gj = f * k - g * j;
+        const el_hi = e * l - h * i;
+        const ek_gi = e * k - g * i;
+        const ej_fi = e * j - f * i;
+
+        result[3] = -(b * gl_hk - c * fl_hj + d * fk_gj) * inv_det;
+        result[7] = (a * gl_hk - c * el_hi + d * ek_gi) * inv_det;
+        result[11] = -(a * fl_hj - b * el_hi + d * ej_fi) * inv_det;
+        result[15] = (a * fk_gj - b * ek_gi + c * ej_fi) * inv_det;
+
+        return true;
     }
 
     /// Attempts to extract the scale, translation, and rotation components from the given scale/rotation/translation matrix.
